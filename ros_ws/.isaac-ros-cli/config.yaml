@@ -1,0 +1,7 @@
+# isaac-ros CLI workspace config (Isaac ROS 5.0).
+# Adds the `spine` image layer (docker/Dockerfile.spine) on top of NVIDIA's base image when
+# running `isaac-ros activate --build-local`.
+docker:
+  image:
+    additional_image_keys:
+      - spine

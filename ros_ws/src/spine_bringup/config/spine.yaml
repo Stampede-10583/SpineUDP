@@ -1,0 +1,54 @@
+# Spine coprocessor parameters. Launch arguments (rio_address, nt_server, bind_address) override
+# the matching values here. Units: seconds, metres, radians.
+
+spine_companion:
+  ros__parameters:
+    # Where Streams 1 and 3 are received. 0.0.0.0 = every interface.
+    bind_address: "0.0.0.0"
+    odometry_port: 5801          # Stream 1
+    trigger_port: 5803           # Stream 3
+    # Where Stream 2 goes: the roboRIO (10.105.83.2), or 127.0.0.1 for simulation.
+    rio_address: "10.105.83.2"
+    rio_pose_port: 5802
+    # Withhold poses older than this relative to the newest trigger (RIO time vs RIO time).
+    # Kept under the RIO's own 1.5 s limit.
+    max_age_s: 1.4
+    # Static transform from TavSLAM's map frame to the WPILib field frame (blue-alliance origin,
+    # +x toward the red wall, CCW theta). Identity when the map is already the field.
+    field_from_map_x: 0.0
+    field_from_map_y: 0.0
+    field_from_map_yaw: 0.0
+    stats_period_s: 1.0          # spine/stats and /diagnostics cadence
+
+spine_synthetic_pose:
+  ros__parameters:
+    # Where the synthetic robot starts on the field when odometry starts.
+    field_start_x: 2.0
+    field_start_y: 4.0
+    field_start_theta: 0.0
+    # Simulated processing latency, uniform in mean +/- jitter. Jitter above the ~16.7 ms trigger
+    # period reorders results, which exercises the companion's order gate.
+    latency_mean_s: 0.045
+    latency_jitter_s: 0.025
+    # Fault injection, per trigger.
+    drop_probability: 0.0        # no result at all
+    invalid_probability: 0.0     # FusedPose.valid = false (no fix)
+    stale_probability: 0.0       # held back stale_delay_s, past max_age_s
+    stale_delay_s: 2.0
+    # Pose error: an Ornstein-Uhlenbeck wander plus white noise.
+    wander_reversion_per_s: 0.5
+    wander_sigma_xy: 0.03
+    wander_sigma_theta: 0.01
+    noise_xy: 0.005
+    noise_theta: 0.002
+    seed: 10583                  # 0 = random each run
+
+spine_stats:
+  ros__parameters:
+    nt_server: "10.105.83.2"     # empty = find the RIO by team number
+    team: 10583
+    nt_identity: "spine-orin"
+    log_dir: ""                  # empty = $SPINE_LOG_DIR (set by scripts/env.sh), else ~/.ros/spine_logs
+    log_max_bytes: 10485760      # 10 MB per file
+    log_backups: 20
+    period_s: 1.0

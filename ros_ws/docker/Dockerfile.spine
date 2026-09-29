@@ -1,0 +1,23 @@
+# Spine layer: build tooling and the one dependency rosdep can't supply (pyntcore).
+#
+# Used two ways:
+#   - Isaac ROS 5.0: stacked on NVIDIA's image by `isaac-ros activate --build-local`
+#     (registered in .isaac-ros-cli/config.yaml). Ubuntu 24.04 + NVIDIA's Lyrical build.
+#   - Plain PC:      `scripts/setup_host.sh --plain` builds it with
+#     BASE_IMAGE=ros:lyrical-ros-base (Ubuntu 26.04 + stock Lyrical). No GPU needed.
+# Package dependencies (rclcpp_components, launch_testing, ...) are installed by rosdep in
+# scripts/build.sh, from each package.xml, so this file does not list them.
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+ARG PYNTCORE_VERSION=2026.2.2
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      python3-pip python3-rosdep python3-colcon-common-extensions build-essential cmake git \
+ && rm -rf /var/lib/apt/lists/*
+
+# RobotPy's NT4 client for spine_stats. Wheels exist for x86_64 and aarch64.
+RUN python3 -m pip install --no-cache-dir --break-system-packages "pyntcore==${PYNTCORE_VERSION}"
+
+RUN [ -f /etc/ros/rosdep/sources.list.d/20-default.list ] || rosdep init

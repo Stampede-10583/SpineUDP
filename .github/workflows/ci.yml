@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  java:
+    name: Java library + bench RIO (Gradle)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'   # GradleRIO 2026 / Gradle 8.11 need JDK 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Java sources are ASCII-only
+        # javac uses the platform encoding (Windows-1252 on Windows); keep sources portable.
+        run: |
+          if LC_ALL=C grep -rnP '[^\x00-\x7F]' src/; then
+            echo "::error::non-ASCII characters in Java sources (listed above)"
+            exit 1
+          fi
+
+      - name: Build and test (includes the golden-vector test shared with C++)
+        run: bash ./gradlew build
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-test-reports
+          path: build/reports/tests/
+
+  ros:
+    name: ROS 2 Lyrical workspace (${{ matrix.runner }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # Stock Lyrical binaries exist only for Ubuntu 26.04, so the job runs in a 26.04
+        # container using the same setup script as a developer PC. The arm64 runner builds
+        # aarch64 like the Orin; GitHub offers it free only to public repositories.
+        runner: ${{ fromJSON(github.event.repository.private && '["ubuntu-24.04"]' || '["ubuntu-24.04", "ubuntu-24.04-arm"]') }}
+    runs-on: ${{ matrix.runner }}
+    container: ubuntu:26.04
+    timeout-minutes: 45
+    env:
+      LANG: C.UTF-8
+      DEBIAN_FRONTEND: noninteractive
+      # Every node in the tests is on this machine.
+      ROS_AUTOMATIC_DISCOVERY_RANGE: LOCALHOST
+    steps:
+      - name: Base tools for checkout
+        run: apt-get update && apt-get install -y --no-install-recommends git ca-certificates
+
+      - uses: actions/checkout@v4
+
+      - name: Set up ROS 2 Lyrical, rosdep and the pyntcore venv
+        run: ros_ws/scripts/setup_host.sh --native
+
+      - name: Build and run every test (gtest, pytest, launch_testing fake-RIO integration)
+        run: ros_ws/scripts/test.sh
+
+      - name: Sources compile with GCC 13 (the Orin's compiler)
+        if: runner.arch == 'X64'
+        run: |
+          apt-get install -y --no-install-recommends g++-13
+          ros_ws/scripts/check_gcc13.sh
+
+      - name: Upload colcon logs and test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ros-logs-${{ matrix.runner }}
+          path: |
+            ros_ws/log/
+            ros_ws/build/*/test_results/

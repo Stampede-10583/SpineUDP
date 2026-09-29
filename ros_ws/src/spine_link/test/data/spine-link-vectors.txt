@@ -1,0 +1,30 @@
+# Spine link golden vectors. Shared by the Java tests (SpineUDPTest.goldenVectorsMatchSharedFile)
+# and the C++ tests (spine_link). Both ends encode each packet from its field values and must
+# produce exactly the bytes in `expect`, then decode `expect` back to the same values bit-for-bit.
+#
+# Format: one packet per line, whitespace-separated:
+#   <stream> <name> <field>=<value> ... expect=<hex>
+#   stream:  odom (Stream 1, 64 B) | pose (Stream 2, 40 B) | trig (Stream 3, 88 B)
+#   fields:  in wire order. int64 fields (seq, packetSeq, triggerSeq[i]) are decimal integers.
+#            float64 fields are either decimal or C99 hex-float (e.g. 0x1.921fb54442d18p1), which
+#            Java Double.parseDouble and C/C++ strtod both parse exactly; Python needs
+#            float.fromhex for the hex form.
+#   expect:  the whole packet, little-endian, as lowercase hex (2 digits per byte, byte 0 first).
+#
+# trig vectors are real trigger-table states (triggerSeq consecutive from 0, -1 sentinels with a
+# 0.0 timestamp), so the Java TriggerRing can reproduce them.
+#
+# Keep in lockstep with VisionLinkProtocol, ros_ws/src/spine_link/include/spine_link/protocol.hpp
+# and docs/spine-link.md. Adding a vector is fine; changing an existing one means the wire format
+# changed.
+
+odom basic seq=0 timestamp=12.5 x=1.5 y=-2.25 theta=0.75 vx=0.1 vy=0.2 omega=0.3 expect=00000000000000000000000000002940000000000000f83f00000000000002c0000000000000e83f9a9999999999b93f9a9999999999c93f333333333333d33f
+odom big_seq_pi_negzero seq=9007199254740993 timestamp=3600.000123456789 x=-1e-300 y=123456.789 theta=0x1.921fb54442d18p1 vx=-0.0 vy=0x0.0000000000001p-1022 omega=-0x1.fffffffffffffp1023 expect=0100000000002000be852e100020ac4059f3f8c21f6ea581c976be9f0c24fe40182d4454fb21094000000000000000800100000000000000ffffffffffffefff
+pose basic seq=7 timestamp=12.45 x=1.0 y=2.0 theta=0.5 expect=07000000000000006666666666e62840000000000000f03f0000000000000040000000000000e03f
+pose ts_all_mantissa_bits seq=1 timestamp=0x1.fffffffffffffp6 x=8.27 y=-4.1 theta=-3.0 expect=0100000000000000ffffffffffff5f400ad7a3703d8a204066666666666610c000000000000008c0
+pose ts_negzero seq=2 timestamp=-0.0 x=0.0 y=0.0 theta=0.0 expect=02000000000000000000000000000080000000000000000000000000000000000000000000000000
+pose ts_subnormal seq=3 timestamp=0x0.0000000000001p-1022 x=16.54 y=8.21 theta=0x1.921fb54442d18p1 expect=030000000000000001000000000000000ad7a3703d8a3040ec51b81e856b2040182d4454fb210940
+pose ts_one_ulp_above_100 seq=-1 timestamp=0x1.9000000000001p6 x=0.25 y=0.5 theta=-0.125 expect=ffffffffffffffff0100000000005940000000000000d03f000000000000e03f000000000000c0bf
+trig first_trigger packetSeq=0 triggerSeq[0]=0 timestamp[0]=5.123456789 triggerSeq[1]=-1 timestamp[1]=0.0 triggerSeq[2]=-1 timestamp[2]=0.0 triggerSeq[3]=-1 timestamp[3]=0.0 triggerSeq[4]=-1 timestamp[4]=0.0 expect=000000000000000000000000000000008de5dc746b7e1440ffffffffffffffff0000000000000000ffffffffffffffff0000000000000000ffffffffffffffff0000000000000000ffffffffffffffff0000000000000000
+trig three_triggers packetSeq=2 triggerSeq[0]=2 timestamp[0]=5.156790122 triggerSeq[1]=1 timestamp[1]=5.140123456 triggerSeq[2]=0 timestamp[2]=5.123456789 triggerSeq[3]=-1 timestamp[3]=0.0 triggerSeq[4]=-1 timestamp[4]=0.0 expect=02000000000000000200000000000000ac4df9968da014400100000000000000a3b0f3857c8f144000000000000000008de5dc746b7e1440ffffffffffffffff0000000000000000ffffffffffffffff0000000000000000
+trig full_table packetSeq=41 triggerSeq[0]=6 timestamp[0]=0x1.fffffffffffffp6 triggerSeq[1]=5 timestamp[1]=127.9 triggerSeq[2]=4 timestamp[2]=127.88333333333334 triggerSeq[3]=3 timestamp[3]=127.86666666666666 triggerSeq[4]=2 timestamp[4]=127.85 expect=29000000000000000600000000000000ffffffffffff5f4005000000000000009a99999999f95f4004000000000000008988888888f85f4003000000000000007777777777f75f4002000000000000006666666666f65f40

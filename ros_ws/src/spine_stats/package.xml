@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>spine_stats</name>
+  <version>0.1.0</version>
+  <description>Publishes the Orin-side Spine link counters to NetworkTables (Spine/Orin/*) as an NT4 client, and writes rotating JSON Lines logs of both ends of the link.</description>
+  <maintainer email="jameskorten4@gmail.com">FRC Team 10583</maintainer>
+  <license>BSD-3-Clause</license>
+
+  <!-- pyntcore (RobotPy's NT4 client) has no rosdep key: it comes from pip, installed by
+       scripts/setup_host.sh (venv) or docker/Dockerfile.spine. -->
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>spine_interfaces</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

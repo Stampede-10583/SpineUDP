@@ -1,0 +1,2 @@
+# Read by the Isaac ROS docker tooling: where to look for Dockerfile.<key> layers.
+CONFIG_DOCKER_SEARCH_DIRS=(${ISAAC_ROS_WS}/docker /etc/isaac-ros-cli/docker)
